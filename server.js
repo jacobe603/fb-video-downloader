@@ -355,15 +355,25 @@ async function handleDownload(req, res) {
       }
 
       const id = generateId();
-      // Ensure filename has .mp4 extension and add timestamp
+      // Sanitize filename - remove path traversal and dangerous characters
       let baseName = filename || 'video';
       if (baseName.toLowerCase().endsWith('.mp4')) {
         baseName = baseName.slice(0, -4);
       }
+      // Remove path separators and dangerous characters
+      baseName = baseName.replace(/[\/\\:*?"<>|]/g, '_').replace(/\.\./g, '_');
+      // Limit length
+      baseName = baseName.substring(0, 100);
+
       const now = new Date();
       const timestamp = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '');
       const safeFilename = `${baseName}_${timestamp}.mp4`;
       const outputPath = path.join(DOWNLOADS_DIR, safeFilename);
+
+      // Final safety check - ensure output is within downloads directory
+      if (!outputPath.startsWith(DOWNLOADS_DIR)) {
+        throw new Error('Invalid filename');
+      }
 
       activeDownloads.set(id, {
         status: 'starting',
@@ -432,10 +442,12 @@ function handleFile(req, res, id, filename) {
   const dl = activeDownloads.get(id);
   if (dl && dl.outputPath && fs.existsSync(dl.outputPath)) {
     const stat = fs.statSync(dl.outputPath);
+    // Sanitize filename for Content-Disposition header
+    const safeFilename = filename.replace(/[^\w\s.-]/g, '_').substring(0, 100);
     res.writeHead(200, {
       'Content-Type': 'video/mp4',
       'Content-Length': stat.size,
-      'Content-Disposition': `attachment; filename="${filename}"`
+      'Content-Disposition': `attachment; filename="${safeFilename}"`
     });
     fs.createReadStream(dl.outputPath).pipe(res);
   } else {
