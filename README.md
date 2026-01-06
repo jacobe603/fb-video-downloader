@@ -14,7 +14,7 @@ Facebook uses DASH streaming which splits video and audio into separate streams.
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/fb-video-downloader.git
+git clone https://github.com/jacobe603/fb-video-downloader.git
 cd fb-video-downloader
 npm install
 ```
