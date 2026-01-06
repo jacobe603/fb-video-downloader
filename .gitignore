@@ -1,4 +1,6 @@
 node_modules/
+downloads/
 *.mp4
 .temp_*
 .DS_Store
+.claude/

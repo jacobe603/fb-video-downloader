@@ -194,10 +194,12 @@ const HTML = `<!DOCTYPE html>
 
     <div class="tip">
       <strong>How to get stream URLs:</strong><br>
-      1. Open the Facebook video in your browser<br>
-      2. Open DevTools (F12) > Network tab<br>
-      3. Filter by ".mp4" and play the video<br>
-      4. Copy the two fbcdn.net URLs (video + audio streams)
+      1. Open DevTools (F12) → Network tab → Filter by <code>video.</code><br>
+      2. Play the Facebook video for a few seconds<br>
+      3. Find TWO different .mp4 URLs from <code>video.*.fbcdn.net</code>:<br>
+      &nbsp;&nbsp;&nbsp;• <strong>VIDEO</strong>: Large size (100+ MB), path has <code>/m366/</code><br>
+      &nbsp;&nbsp;&nbsp;• <strong>AUDIO</strong>: Small size (5-20 MB), path has <code>/m311/</code><br>
+      4. Right-click each → Copy → Copy URL
     </div>
 
     <form id="downloadForm">
@@ -332,8 +334,36 @@ async function handleDownload(req, res) {
   req.on('end', async () => {
     try {
       const { url1, url2, filename } = JSON.parse(body);
+
+      // Validate that we have both video and audio streams
+      const type1 = detectStreamType(url1);
+      const type2 = detectStreamType(url2);
+
+      console.log(`[Validate] URL1 detected as: ${type1}`);
+      console.log(`[Validate] URL2 detected as: ${type2}`);
+
+      if (type1 === type2 && type1 !== 'unknown') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          error: `Both URLs are ${type1} streams! You need one VIDEO and one AUDIO URL. Look for a smaller file (~5-20 MB) with /m311/ in the path for audio.`
+        }));
+        return;
+      }
+
+      if (type1 === 'unknown' && type2 === 'unknown') {
+        console.log('[Validate] Warning: Could not detect stream types, proceeding anyway');
+      }
+
       const id = generateId();
-      const outputPath = path.join(DOWNLOADS_DIR, `${id}_${filename || 'video.mp4'}`);
+      // Ensure filename has .mp4 extension and add timestamp
+      let baseName = filename || 'video';
+      if (baseName.toLowerCase().endsWith('.mp4')) {
+        baseName = baseName.slice(0, -4);
+      }
+      const now = new Date();
+      const timestamp = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '');
+      const safeFilename = `${baseName}_${timestamp}.mp4`;
+      const outputPath = path.join(DOWNLOADS_DIR, safeFilename);
 
       activeDownloads.set(id, {
         status: 'starting',

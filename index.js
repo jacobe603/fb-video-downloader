@@ -37,13 +37,13 @@ ${chalk.yellow('Examples:')}
   process.exit(0);
 }
 
-// Web mode
+// Web mode - start server and keep running
 if (args.includes('--web')) {
   const portIdx = args.indexOf('--port');
   const port = portIdx !== -1 ? parseInt(args[portIdx + 1]) : 3000;
   require('./server')(port);
-  process.exit(0);
-}
+  // Server keeps process alive, no need for anything else
+} else {
 
 // CLI args mode
 const videoIdx = args.findIndex(a => a === '-v' || a === '--video');
@@ -146,3 +146,5 @@ async function runInteractive() {
 
   await runCli(videoUrl, audioUrl, outputName);
 }
+
+} // end else (not --web mode)
