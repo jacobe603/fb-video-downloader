@@ -65,7 +65,9 @@ if (videoIdx !== -1 && audioIdx !== -1) {
 async function runCli(videoUrl, audioUrl, outputFile) {
   console.log(chalk.bold.blue('\n  Facebook Video Downloader\n'));
 
-  const outputPath = path.resolve(outputFile);
+  // Save to downloads folder within project
+  const downloadsFolder = path.join(__dirname, 'downloads');
+  const outputPath = path.isAbsolute(outputFile) ? outputFile : path.join(downloadsFolder, outputFile);
   const multibar = new cliProgress.MultiBar({
     format: '  {label} |' + chalk.cyan('{bar}') + '| {percentage}% | {value}/{total} MB',
     barCompleteChar: '\u2588',
@@ -141,7 +143,19 @@ async function runInteractive() {
   }
 
   const defaultName = `facebook_${Date.now()}.mp4`;
-  const outputName = await ask(chalk.yellow(`  Output filename [${defaultName}]: `)) || defaultName;
+  let outputName = await ask(chalk.yellow(`  Output filename [${defaultName}]: `)) || defaultName;
+
+  // Sanitize filename: remove characters that cause issues on Windows/FFmpeg
+  outputName = outputName
+    .replace(/[<>:"/\\|?*]/g, '')  // Remove invalid Windows filename chars
+    .replace(/\s+/g, '_')           // Replace spaces with underscores
+    .trim();
+
+  // Ensure .mp4 extension
+  if (!outputName.toLowerCase().endsWith('.mp4')) {
+    outputName += '.mp4';
+  }
+
   rl.close();
 
   await runCli(videoUrl, audioUrl, outputName);
